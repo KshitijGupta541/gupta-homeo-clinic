@@ -1,14 +1,14 @@
 import Patient from "../models/Patient.js";
 
-// Create Patient
-export const createPatient = async (req, res) => {
+// Add Patient
+export const addPatient = async (req, res) => {
   try {
     const patient = await Patient.create(req.body);
 
     res.status(201).json({
       success: true,
-      message: "Patient created successfully.",
-      data: patient,
+      message: "Patient added successfully",
+      patient,
     });
   } catch (error) {
     res.status(500).json({
@@ -21,13 +21,12 @@ export const createPatient = async (req, res) => {
 // Get All Patients
 export const getPatients = async (req, res) => {
   try {
-    const patients = await Patient.find().sort({
-      createdAt: -1,
-    });
+    const patients = await Patient.find().sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
-      data: patients,
+      count: patients.length,
+      patients,
     });
   } catch (error) {
     res.status(500).json({
@@ -37,21 +36,21 @@ export const getPatients = async (req, res) => {
   }
 };
 
-// Get Patient By ID
-export const getPatientById = async (req, res) => {
+// Get Single Patient
+export const getPatient = async (req, res) => {
   try {
     const patient = await Patient.findById(req.params.id);
 
     if (!patient) {
       return res.status(404).json({
         success: false,
-        message: "Patient not found.",
+        message: "Patient not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: patient,
+      patient,
     });
   } catch (error) {
     res.status(500).json({
@@ -76,14 +75,14 @@ export const updatePatient = async (req, res) => {
     if (!patient) {
       return res.status(404).json({
         success: false,
-        message: "Patient not found.",
+        message: "Patient not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Patient updated successfully.",
-      data: patient,
+      message: "Patient updated successfully",
+      patient,
     });
   } catch (error) {
     res.status(500).json({
@@ -101,13 +100,13 @@ export const deletePatient = async (req, res) => {
     if (!patient) {
       return res.status(404).json({
         success: false,
-        message: "Patient not found.",
+        message: "Patient not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: "Patient deleted successfully.",
+      message: "Patient deleted successfully",
     });
   } catch (error) {
     res.status(500).json({

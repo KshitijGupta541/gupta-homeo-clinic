@@ -5,117 +5,300 @@ import {
   Clock3,
   CheckCircle2,
   IndianRupee,
-  TrendingUp,
+  Users,
+  CalendarDays,
+  CreditCard,
+  Hourglass,
+  RefreshCw,
 } from "lucide-react";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function StatsCards() {
   const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    confirmed: 0,
-    completed: 0,
+    totalPatients: 0,
+    totalAppointments: 0,
+    todayAppointments: 0,
+    pendingAppointments: 0,
+    confirmedAppointments: 0,
+    completedAppointments: 0,
+    pendingPayments: 0,
+    paidPayments: 0,
+    revenue: 0,
   });
 
-  useEffect(() => {
-    fetchAppointments();
-  }, []);
+  const [loading, setLoading] = useState(true);
 
-  const fetchAppointments = async () => {
+  const authConfig = () => ({
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+
+  const fetchStats = async () => {
     try {
-      const res = await axios.get(
-        "https://gupta-homeo-clinic.onrender.com/api/appointments"
+      setLoading(true);
+
+      const [appointmentsResponse, patientsResponse] =
+        await Promise.all([
+          axios.get(
+            `${API_URL}/appointments`,
+            authConfig()
+          ),
+          axios.get(
+            `${API_URL}/patients`,
+            authConfig()
+          ),
+        ]);
+
+      const appointments =
+        appointmentsResponse.data?.data || [];
+
+      const patients =
+        patientsResponse.data?.patients || [];
+
+      const today = new Date().toLocaleDateString(
+        "en-CA",
+        {
+          timeZone: "Asia/Kolkata",
+        }
       );
 
-      const appointments = res.data;
+      const todayAppointments =
+        appointments.filter((appointment) => {
+          if (!appointment.date) return false;
+
+          return (
+            new Date(
+              appointment.date
+            ).toLocaleDateString("en-CA", {
+              timeZone: "Asia/Kolkata",
+            }) === today
+          );
+        }).length;
+
+      const pendingAppointments =
+        appointments.filter(
+          (appointment) =>
+            appointment.status === "Pending"
+        ).length;
+
+      const confirmedAppointments =
+        appointments.filter(
+          (appointment) =>
+            appointment.status === "Confirmed"
+        ).length;
+
+      const completedAppointments =
+        appointments.filter(
+          (appointment) =>
+            appointment.status === "Completed"
+        ).length;
+
+      const pendingPayments =
+        appointments.filter(
+          (appointment) =>
+            appointment.paymentStatus === "Pending" ||
+            appointment.paymentStatus ===
+              "Pending Verification"
+        ).length;
+
+      const paidPayments =
+        appointments.filter(
+          (appointment) =>
+            appointment.paymentStatus === "Paid"
+        ).length;
+
+      const revenue = appointments
+        .filter(
+          (appointment) =>
+            appointment.paymentStatus === "Paid"
+        )
+        .reduce(
+          (total, appointment) =>
+            total +
+            Number(
+              appointment.paymentAmount || 300
+            ),
+          0
+        );
 
       setStats({
-        total: appointments.length,
-        pending: appointments.filter(
-          (a) => a.status === "Pending"
-        ).length,
-        confirmed: appointments.filter(
-          (a) => a.status === "Confirmed"
-        ).length,
-        completed: appointments.filter(
-          (a) => a.status === "Completed"
-        ).length,
+        totalPatients: patients.length,
+        totalAppointments: appointments.length,
+        todayAppointments,
+        pendingAppointments,
+        confirmedAppointments,
+        completedAppointments,
+        pendingPayments,
+        paidPayments,
+        revenue,
       });
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Failed to load dashboard statistics:",
+        error
+      );
+
+      if (error.response?.status === 401) {
+        alert(
+          "Your admin session has expired. Please login again."
+        );
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
   const cards = [
     {
-      title: "Total Appointments",
-      value: stats.total,
-      icon: CalendarCheck,
-      color: "from-blue-500 to-blue-600",
+      title: "Total Patients",
+      value: stats.totalPatients,
+      sub: "Registered patients",
+      icon: Users,
+      color: "from-emerald-500 to-green-600",
     },
     {
-      title: "Pending",
-      value: stats.pending,
+      title: "Total Appointments",
+      value: stats.totalAppointments,
+      sub: "All appointments",
+      icon: CalendarDays,
+      color: "from-blue-500 to-cyan-500",
+    },
+    {
+      title: "Today's Appointments",
+      value: stats.todayAppointments,
+      sub: "Today's schedule",
+      icon: CalendarCheck,
+      color: "from-indigo-500 to-blue-600",
+    },
+    {
+      title: "Pending Appointments",
+      value: stats.pendingAppointments,
+      sub: "Needs attention",
       icon: Clock3,
       color: "from-yellow-500 to-orange-500",
     },
     {
       title: "Confirmed",
-      value: stats.confirmed,
+      value: stats.confirmedAppointments,
+      sub: "Confirmed appointments",
       icon: CheckCircle2,
-      color: "from-green-500 to-emerald-600",
+      color: "from-teal-500 to-emerald-600",
+    },
+    {
+      title: "Completed",
+      value: stats.completedAppointments,
+      sub: "Successfully treated",
+      icon: CheckCircle2,
+      color: "from-green-500 to-lime-600",
+    },
+    {
+      title: "Pending Payments",
+      value: stats.pendingPayments,
+      sub: "Requires verification",
+      icon: Hourglass,
+      color: "from-orange-500 to-red-500",
+    },
+    {
+      title: "Paid Payments",
+      value: stats.paidPayments,
+      sub: "Verified payments",
+      icon: CreditCard,
+      color: "from-purple-500 to-indigo-600",
     },
     {
       title: "Revenue",
-      value: `₹${stats.completed * 300}`,
+      value: `₹${stats.revenue.toLocaleString("en-IN")}`,
+      sub: "From paid appointments",
       icon: IndianRupee,
-      color: "from-purple-500 to-indigo-600",
+      color: "from-fuchsia-500 to-purple-600",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+    <div>
 
-      {cards.map((card) => {
-        const Icon = card.icon;
+      {/* Header */}
 
-        return (
-          <div
-            key={card.title}
-            className="relative overflow-hidden rounded-3xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 p-6"
-          >
+      <div className="flex justify-between items-center mb-5">
+
+        <div>
+          <h2 className="text-xl font-bold text-gray-800">
+            Clinic Overview
+          </h2>
+
+          <p className="text-sm text-gray-500">
+            Live statistics from your clinic
+          </p>
+        </div>
+
+        <button
+          onClick={fetchStats}
+          disabled={loading}
+          className="p-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl transition"
+          title="Refresh statistics"
+        >
+          <RefreshCw
+            size={18}
+            className={
+              loading
+                ? "animate-spin"
+                : ""
+            }
+          />
+        </button>
+
+      </div>
+
+      {/* Cards */}
+
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+
+        {cards.map((card) => {
+          const Icon = card.icon;
+
+          return (
             <div
-              className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${card.color}`}
-            />
+              key={card.title}
+              className="group rounded-3xl bg-white p-6 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+            >
 
-            <div className="flex justify-between items-start">
+              <div className="flex items-center justify-between">
 
-              <div>
+                <div>
 
-                <p className="text-gray-500 text-sm font-medium">
-                  {card.title}
-                </p>
+                  <p className="text-sm font-medium text-gray-500">
+                    {card.title}
+                  </p>
 
-                <h2 className="text-4xl font-bold text-gray-800 mt-3">
-                  {card.value}
-                </h2>
+                  <h2 className="mt-3 text-3xl font-bold text-gray-800">
+                    {loading ? "—" : card.value}
+                  </h2>
 
-                <div className="flex items-center gap-1 mt-4 text-green-600 text-sm font-medium">
-                  <TrendingUp size={16} />
-                  <span>12% from last month</span>
+                  <p className="mt-2 text-sm text-gray-500">
+                    {card.sub}
+                  </p>
+
+                </div>
+
+                <div
+                  className={`rounded-2xl bg-gradient-to-br ${card.color} p-4 text-white shadow-lg transition-transform duration-300 group-hover:scale-110`}
+                >
+                  <Icon size={28} />
                 </div>
 
               </div>
 
-              <div
-                className={`bg-gradient-to-br ${card.color} text-white p-4 rounded-2xl shadow-lg`}
-              >
-                <Icon size={30} />
-              </div>
-
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+
+      </div>
 
     </div>
   );

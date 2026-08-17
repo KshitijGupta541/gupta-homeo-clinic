@@ -1,71 +1,55 @@
-import { useState } from "react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-import usePatients from "../../hooks/usePatients";
+export default function PatientTable({
+  patients,
+  loading,
+  onEdit,
+  onDelete,
+}) {
+  const navigate = useNavigate();
 
-import PatientToolbar from "./PatientToolbar";
-import LoadingSpinner from "./LoadingSpinner";
-import EmptyState from "./EmptyState";
-import AddPatientModal from "./AddPatientModal";
-
-export default function PatientTable() {
-  const {
-    patients,
-    loading,
-    error,
-    searchPatients,
-    refreshPatients,
-  } = usePatients();
-
-  const [showAddModal, setShowAddModal] = useState(false);
-
-  if (loading) return <LoadingSpinner />;
-
-  if (error) {
+  if (loading) {
     return (
-      <div className="bg-red-100 border border-red-300 text-red-700 rounded-lg p-4">
-        {error}
+      <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
+        Loading patients...
       </div>
     );
   }
 
   return (
-    <>
-      <PatientToolbar
-        onSearch={searchPatients}
-        onAddPatient={() => setShowAddModal(true)}
-      />
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="min-w-full">
+          <thead className="bg-emerald-600 text-white">
+            <tr>
+              <th className="px-6 py-4 text-left">Patient ID</th>
+              <th className="px-6 py-4 text-left">Name</th>
+              <th className="px-6 py-4 text-left">Phone</th>
+              <th className="px-6 py-4 text-left">Gender</th>
+              <th className="px-6 py-4 text-left">Age</th>
+              <th className="px-6 py-4 text-left">Status</th>
+              <th className="px-6 py-4 text-center">Actions</th>
+            </tr>
+          </thead>
 
-      <AddPatientModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onPatientAdded={refreshPatients}
-      />
-
-      {patients.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="overflow-x-auto bg-white rounded-xl shadow">
-          <table className="min-w-full">
-            <thead className="bg-blue-600 text-white">
+          <tbody>
+            {patients.length === 0 ? (
               <tr>
-                <th className="px-6 py-4 text-left">Patient ID</th>
-                <th className="px-6 py-4 text-left">Name</th>
-                <th className="px-6 py-4 text-left">Age</th>
-                <th className="px-6 py-4 text-left">Gender</th>
-                <th className="px-6 py-4 text-left">Phone</th>
-                <th className="px-6 py-4 text-left">Blood Group</th>
-                <th className="px-6 py-4 text-left">Status</th>
-                <th className="px-6 py-4 text-center">Actions</th>
+                <td
+                  colSpan={7}
+                  className="py-12 text-center text-gray-500"
+                >
+                  No patients found.
+                </td>
               </tr>
-            </thead>
-
-            <tbody>
-              {patients.map((patient) => (
+            ) : (
+              patients.map((patient) => (
                 <tr
                   key={patient._id}
-                  className="border-b hover:bg-gray-50"
+                  className="border-b hover:bg-emerald-50 transition-colors duration-200"
                 >
-                  <td className="px-6 py-4 font-medium">
+                  <td className="px-6 py-4 font-semibold">
                     {patient.patientId}
                   </td>
 
@@ -74,7 +58,7 @@ export default function PatientTable() {
                   </td>
 
                   <td className="px-6 py-4">
-                    {patient.age}
+                    {patient.phone}
                   </td>
 
                   <td className="px-6 py-4">
@@ -82,44 +66,61 @@ export default function PatientTable() {
                   </td>
 
                   <td className="px-6 py-4">
-                    {patient.phone}
+                    {patient.age}
                   </td>
 
                   <td className="px-6 py-4">
-                    {patient.bloodGroup || "-"}
+                    {patient.isActive ? (
+                      <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-medium">
+                        Inactive
+                      </span>
+                    )}
                   </td>
 
                   <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        patient.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {patient.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </td>
+                    <div className="flex justify-center gap-3">
 
-                  <td className="px-6 py-4 text-center space-x-2">
-                    <button className="text-blue-600 hover:underline">
-                      View
-                    </button>
+                      {/* View */}
+                      <button
+                        onClick={() =>
+                          navigate(`/admin/patients/${patient._id}`)
+                        }
+                        className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition"
+                        title="View Patient"
+                      >
+                        <Eye size={18} />
+                      </button>
 
-                    <button className="text-yellow-600 hover:underline">
-                      Edit
-                    </button>
+                      {/* Edit */}
+                      <button
+                        onClick={() => onEdit?.(patient)}
+                        className="p-2 rounded-lg bg-yellow-100 text-yellow-600 hover:bg-yellow-200 transition"
+                        title="Edit Patient"
+                      >
+                        <Pencil size={18} />
+                      </button>
 
-                    <button className="text-red-600 hover:underline">
-                      Delete
-                    </button>
+                      {/* Delete */}
+                      <button
+                        onClick={() => onDelete?.(patient)}
+                        className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition"
+                        title="Delete Patient"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+
+                    </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

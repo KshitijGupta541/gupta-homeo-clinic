@@ -8,6 +8,7 @@ import connectDB from "./config/db.js";
 import appointmentRoutes from "./routes/appointmentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import patientRoutes from "./routes/patientRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 connectDB();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use("/api/patients", patientRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Health Check
 app.get("/", (req, res) => {

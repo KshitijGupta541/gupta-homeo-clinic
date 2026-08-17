@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   User,
   Phone,
@@ -23,6 +24,8 @@ const timeSlots = [
 ];
 
 export default function AppointmentForm() {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
@@ -35,6 +38,8 @@ export default function AppointmentForm() {
     symptoms: "",
   });
 
+  const [submitting, setSubmitting] = useState(false);
+
   const handleChange = (e) => {
     setFormData((prev) => ({
       ...prev,
@@ -43,38 +48,64 @@ export default function AppointmentForm() {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    const response = await axios.post(
-      "https://gupta-homeo-clinic.onrender.com/api/appointments",
-      formData
-    );
+    try {
+      setSubmitting(true);
 
-    alert(response.data.message);
+      const response = await axios.post(
+        "https://gupta-homeo-clinic.onrender.com/api/appointments",
+        formData
+      );
 
-    setFormData({
-      fullName: "",
-      phone: "",
-      email: "",
-      age: "",
-      gender: "",
-      consultationType: "Clinic Visit",
-      date: "",
-      time: "",
-      symptoms: "",
-    });
-  } catch (error) {
-    console.error(error);
+      /*
+        Different versions of the backend may return the
+        newly created appointment in slightly different places.
+      */
 
-    alert(
-      error.response?.data?.message || "Failed to book appointment."
-    );
-  }
-};
+      const appointment =
+        response.data?.data ||
+        response.data?.appointment ||
+        response.data?.data?.appointment;
+
+      const appointmentId =
+        appointment?._id ||
+        response.data?.appointmentId ||
+        response.data?.data?._id;
+
+      if (!appointmentId) {
+        console.error(
+          "Appointment created but appointment ID was not returned:",
+          response.data
+        );
+
+        alert(
+          "Appointment was created, but we couldn't open the payment page. Please contact the clinic."
+        );
+
+        return;
+      }
+
+      /*
+        Appointment successfully created.
+        Now send the patient directly to the ₹300 payment page.
+      */
+
+      navigate(`/payment/${appointmentId}`);
+    } catch (error) {
+      console.error("Appointment booking error:", error);
+
+      alert(
+        error.response?.data?.message ||
+          "Failed to book appointment. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <section className="py-20 bg-gray-50">
+    <section className="py-16 bg-gray-50">
       <div className="max-w-5xl mx-auto px-6">
 
         <div className="bg-white rounded-3xl shadow-xl p-8 md:p-12">
@@ -94,6 +125,8 @@ export default function AppointmentForm() {
             className="grid md:grid-cols-2 gap-6"
           >
 
+            {/* Full Name */}
+
             <div>
               <label className="font-medium mb-2 flex items-center gap-2">
                 <User size={18} />
@@ -109,6 +142,8 @@ export default function AppointmentForm() {
                 placeholder="Enter your name"
               />
             </div>
+
+            {/* Phone */}
 
             <div>
               <label className="font-medium mb-2 flex items-center gap-2">
@@ -126,6 +161,8 @@ export default function AppointmentForm() {
               />
             </div>
 
+            {/* Email */}
+
             <div>
               <label className="font-medium mb-2 flex items-center gap-2">
                 <Mail size={18} />
@@ -142,6 +179,8 @@ export default function AppointmentForm() {
               />
             </div>
 
+            {/* Age */}
+
             <div>
               <label className="font-medium mb-2">
                 Age
@@ -157,6 +196,8 @@ export default function AppointmentForm() {
               />
             </div>
 
+            {/* Gender */}
+
             <div>
               <label className="font-medium mb-2">
                 Gender
@@ -169,12 +210,17 @@ export default function AppointmentForm() {
                 onChange={handleChange}
                 className="w-full border rounded-xl p-3"
               >
-                <option value="">Select Gender</option>
+                <option value="">
+                  Select Gender
+                </option>
+
                 <option>Male</option>
                 <option>Female</option>
                 <option>Other</option>
               </select>
             </div>
+
+            {/* Consultation */}
 
             <div>
               <label className="font-medium mb-2 flex items-center gap-2">
@@ -188,10 +234,17 @@ export default function AppointmentForm() {
                 onChange={handleChange}
                 className="w-full border rounded-xl p-3"
               >
-                <option>Clinic Visit</option>
-                <option>Online Consultation</option>
+                <option>
+                  Clinic Visit
+                </option>
+
+                <option>
+                  Online Consultation
+                </option>
               </select>
             </div>
+
+            {/* Date */}
 
             <div>
               <label className="font-medium mb-2 flex items-center gap-2">
@@ -209,6 +262,8 @@ export default function AppointmentForm() {
               />
             </div>
 
+            {/* Time */}
+
             <div>
               <label className="font-medium mb-2 flex items-center gap-2">
                 <Clock size={18} />
@@ -222,13 +277,19 @@ export default function AppointmentForm() {
                 onChange={handleChange}
                 className="w-full border rounded-xl p-3"
               >
-                <option value="">Select Time</option>
+                <option value="">
+                  Select Time
+                </option>
 
                 {timeSlots.map((slot) => (
-                  <option key={slot}>{slot}</option>
+                  <option key={slot} value={slot}>
+                    {slot}
+                  </option>
                 ))}
               </select>
             </div>
+
+            {/* Symptoms */}
 
             <div className="md:col-span-2">
               <label className="font-medium mb-2 flex items-center gap-2">
@@ -247,6 +308,8 @@ export default function AppointmentForm() {
               />
             </div>
 
+            {/* Payment */}
+
             <div className="md:col-span-2 bg-emerald-50 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-5">
 
               <div>
@@ -261,9 +324,12 @@ export default function AppointmentForm() {
 
               <button
                 type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 transition text-white px-10 py-4 rounded-xl font-semibold"
+                disabled={submitting}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 transition text-white px-10 py-4 rounded-xl font-semibold"
               >
-                Book Appointment
+                {submitting
+                  ? "Booking..."
+                  : "Book Appointment"}
               </button>
 
             </div>

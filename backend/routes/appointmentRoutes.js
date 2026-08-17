@@ -3,18 +3,46 @@ import express from "express";
 import {
   createAppointment,
   getAppointments,
+  getAppointmentById,
   updateAppointment,
   deleteAppointment,
 } from "../controllers/appointmentController.js";
 
+import { protect } from "../middleware/authMiddleware.js";
+
 const router = express.Router();
 
+// ======================================================
+// PUBLIC
+// ======================================================
+
+// Patient books appointment
 router.post("/", createAppointment);
+
+// ======================================================
+// APPOINTMENT VIEW
+// ======================================================
 
 router.get("/", getAppointments);
 
-router.put("/:id", updateAppointment);
+router.get("/:id", getAppointmentById);
 
-router.delete("/:id", deleteAppointment);
+// ======================================================
+// ADMIN ONLY
+// ======================================================
+
+// Update appointment
+router.put(
+  "/:id",
+  protect,
+  updateAppointment
+);
+
+// Delete appointment
+router.delete(
+  "/:id",
+  protect,
+  deleteAppointment
+);
 
 export default router;

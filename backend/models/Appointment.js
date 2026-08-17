@@ -57,10 +57,49 @@ const appointmentSchema = new mongoose.Schema(
       default: "Pending",
     },
 
+    // Payment Information
     paymentStatus: {
       type: String,
-      enum: ["Pending", "Paid"],
+      enum: [
+        "Pending",
+        "Pending Verification",
+        "Paid",
+        "Rejected",
+      ],
       default: "Pending",
+    },
+
+    paymentAmount: {
+      type: Number,
+      default: 300,
+    },
+
+    paymentMethod: {
+      type: String,
+      enum: ["UPI", "Cash", "Other"],
+      default: "UPI",
+    },
+
+    transactionId: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+
+    paymentScreenshot: {
+      type: String,
+      default: "",
+    },
+
+    paymentVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+
+    paymentRemarks: {
+      type: String,
+      trim: true,
+      default: "",
     },
   },
   {
