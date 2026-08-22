@@ -1,0 +1,17 @@
+User-agent: *
+
+Allow: /
+Allow: /about
+Allow: /treatments
+Allow: /patient-stories
+Allow: /appointment
+Allow: /faq
+Allow: /contact
+
+Disallow: /admin
+Disallow: /admin/
+Disallow: /payment
+Disallow: /payment/
+Disallow: /login
+
+Sitemap: https://guptahomeoclinic.online/sitemap.xml
