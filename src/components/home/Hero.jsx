@@ -1,7 +1,10 @@
 import { Calendar, Video } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export default function Hero() {
+  const navigate = useNavigate();
+
   return (
     <section className="bg-gradient-to-br from-emerald-50 via-white to-cyan-50">
       <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 items-center px-6 py-20">
@@ -34,12 +37,7 @@ export default function Hero() {
             {/* Book Appointment */}
 
             <button
-              onClick={() =>
-                window.open(
-                  "https://wa.me/917023197199?text=Hello%20Doctor,%20I%20would%20like%20to%20book%20an%20appointment.",
-                  "_blank"
-                )
-              }
+              onClick={() => navigate("/appointment")}
               className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 hover:scale-105 transition-all duration-300 text-white px-6 py-4 rounded-xl shadow-lg"
             >
               <Calendar size={20} />
@@ -49,12 +47,7 @@ export default function Hero() {
             {/* Online Consultation */}
 
             <button
-              onClick={() =>
-                window.open(
-                  "https://wa.me/917023197199?text=Hello%20Doctor,%20I%20would%20like%20an%20online%20consultation.",
-                  "_blank"
-                )
-              }
+              onClick={() => navigate("/appointment")}
               className="flex items-center gap-2 border border-emerald-600 text-emerald-700 hover:bg-emerald-50 hover:scale-105 transition-all duration-300 px-6 py-4 rounded-xl"
             >
               <Video size={20} />
