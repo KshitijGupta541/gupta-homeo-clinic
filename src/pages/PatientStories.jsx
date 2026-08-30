@@ -5,58 +5,87 @@ import patientStories from "../data/patientStories";
 export default function PatientStories() {
   return (
     <div className="bg-gray-50 min-h-screen">
+
       {/* Hero */}
+
       <section className="bg-emerald-600 text-white py-20 text-center">
-        <h1 className="text-5xl font-bold">Patient Success Stories</h1>
+
+        <h1 className="text-5xl font-bold">
+          Patient Success Stories
+        </h1>
 
         <p className="mt-5 max-w-2xl mx-auto text-lg">
           Watch real patient experiences and recovery journeys shared by
           Gupta Homeo Clinic.
         </p>
+
       </section>
 
+
       {/* Stories */}
+
       <section className="max-w-7xl mx-auto py-20 px-6">
+
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+
           {patientStories.map((story) => (
+
             <div
               key={story.id}
               className="bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-2xl transition duration-300"
             >
+
               {/* Clickable Thumbnail */}
+
               <a
                 href={story.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block"
               >
+
                 <div className="relative h-64 overflow-hidden group">
+
                   <img
                     src={story.image}
                     alt={story.title}
+                    width="800"
+                    height="512"
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
 
                   {/* Dark Overlay */}
+
                   <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition"></div>
 
                   {/* Play Button */}
+
                   <div className="absolute inset-0 flex items-center justify-center">
+
                     <PlayCircle
                       size={80}
                       className="text-white drop-shadow-lg transition-transform duration-300 group-hover:scale-110"
                     />
+
                   </div>
 
                   {/* Watch Story Badge */}
+
                   <div className="absolute bottom-4 left-4 bg-white text-emerald-700 px-4 py-2 rounded-full font-semibold shadow-lg">
                     ▶ Watch Story
                   </div>
+
                 </div>
+
               </a>
 
+
               {/* Content */}
+
               <div className="p-6">
+
                 <span className="text-sm bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full">
                   {story.category}
                 </span>
@@ -78,15 +107,24 @@ export default function PatientStories() {
                   <FaInstagram />
                   Watch Full Story
                 </a>
+
               </div>
+
             </div>
+
           ))}
+
         </div>
+
       </section>
 
+
       {/* Instagram CTA */}
+
       <section className="bg-white py-20">
+
         <div className="max-w-4xl mx-auto text-center px-6">
+
           <FaInstagram
             size={60}
             className="mx-auto text-pink-600 mb-6"
@@ -110,8 +148,11 @@ export default function PatientStories() {
             <FaInstagram size={24} />
             Follow @dr.dinesh_gupta27
           </a>
+
         </div>
+
       </section>
+
     </div>
   );
 }

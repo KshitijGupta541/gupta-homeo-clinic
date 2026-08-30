@@ -11,7 +11,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-const UPI_ID = "kshitij4199@ptyes";
+const UPI_ID = "9414514199@okbizaxis";
 const CONSULTATION_FEE = 300;
 
 export default function Payment() {
@@ -134,24 +134,37 @@ export default function Payment() {
           </p>
 
           <div className="bg-gray-50 rounded-2xl p-5 mt-6 text-left">
+
             <div className="flex justify-between">
-              <span className="text-gray-500">Amount</span>
-              <span className="font-bold">₹300</span>
+              <span className="text-gray-500">
+                Amount
+              </span>
+
+              <span className="font-bold">
+                ₹300
+              </span>
             </div>
 
             <div className="flex justify-between mt-3">
-              <span className="text-gray-500">Transaction ID</span>
+              <span className="text-gray-500">
+                Transaction ID
+              </span>
+
               <span className="font-semibold break-all ml-4 text-right">
                 {transactionId}
               </span>
             </div>
 
             <div className="flex justify-between mt-3">
-              <span className="text-gray-500">Status</span>
+              <span className="text-gray-500">
+                Status
+              </span>
+
               <span className="text-yellow-600 font-semibold">
                 Pending Verification
               </span>
             </div>
+
           </div>
 
           <button
@@ -180,6 +193,7 @@ export default function Payment() {
         </button>
 
         <div className="text-center mb-10">
+
           <p className="text-emerald-600 font-semibold tracking-wide uppercase text-sm">
             Gupta Homeo Clinic
           </p>
@@ -191,16 +205,22 @@ export default function Payment() {
           <p className="text-gray-500 mt-3">
             Pay the consultation fee to proceed with your appointment.
           </p>
+
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
 
           {/* PAYMENT CARD */}
+
           <div className="bg-white rounded-3xl shadow-xl p-8">
 
             <div className="flex items-center gap-3 mb-6">
+
               <div className="bg-emerald-100 p-3 rounded-xl">
-                <CreditCard className="text-emerald-600" size={24} />
+                <CreditCard
+                  className="text-emerald-600"
+                  size={24}
+                />
               </div>
 
               <div>
@@ -212,9 +232,11 @@ export default function Payment() {
                   Secure UPI payment
                 </p>
               </div>
+
             </div>
 
             <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-6 text-white text-center">
+
               <p className="text-emerald-100 text-sm">
                 Amount Payable
               </p>
@@ -222,6 +244,7 @@ export default function Payment() {
               <p className="text-5xl font-bold mt-2">
                 ₹300
               </p>
+
             </div>
 
             <div className="mt-8 text-center">
@@ -231,12 +254,14 @@ export default function Payment() {
               </p>
 
               <div className="inline-flex p-5 bg-white border rounded-2xl shadow-md">
+
                 <QRCodeSVG
                   value={upiLink}
                   size={220}
                   level="H"
                   includeMargin
                 />
+
               </div>
 
               <p className="text-gray-500 text-sm mt-4">
@@ -264,7 +289,10 @@ export default function Payment() {
                   title="Copy UPI ID"
                 >
                   {copied ? (
-                    <Check size={18} className="text-emerald-600" />
+                    <Check
+                      size={18}
+                      className="text-emerald-600"
+                    />
                   ) : (
                     <Copy size={18} />
                   )}
@@ -281,17 +309,24 @@ export default function Payment() {
             </div>
 
             <div className="flex items-start gap-3 bg-blue-50 text-blue-700 rounded-xl p-4 mt-6">
-              <ShieldCheck size={20} className="mt-0.5 shrink-0" />
+
+              <ShieldCheck
+                size={20}
+                className="mt-0.5 shrink-0"
+              />
 
               <p className="text-sm leading-6">
                 After completing the payment, enter your transaction ID and
                 upload the payment screenshot on this page.
               </p>
+
             </div>
 
           </div>
 
+
           {/* VERIFICATION CARD */}
+
           <div className="bg-white rounded-3xl shadow-xl p-8">
 
             <h2 className="text-2xl font-bold text-gray-800">
@@ -311,6 +346,7 @@ export default function Payment() {
               {/* TRANSACTION ID */}
 
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   UPI Transaction ID
                 </label>
@@ -318,7 +354,9 @@ export default function Payment() {
                 <input
                   type="text"
                   value={transactionId}
-                  onChange={(e) => setTransactionId(e.target.value)}
+                  onChange={(e) =>
+                    setTransactionId(e.target.value)
+                  }
                   placeholder="Enter your transaction ID"
                   className="w-full border border-gray-300 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
                 />
@@ -326,11 +364,14 @@ export default function Payment() {
                 <p className="text-xs text-gray-500 mt-2">
                   You can find this in your UPI payment receipt.
                 </p>
+
               </div>
+
 
               {/* SCREENSHOT */}
 
               <div>
+
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Payment Screenshot
                 </label>
@@ -360,25 +401,36 @@ export default function Payment() {
                   />
 
                 </label>
+
               </div>
+
 
               {/* PREVIEW */}
 
               {preview && (
                 <div>
+
                   <p className="text-sm font-semibold text-gray-700 mb-2">
                     Screenshot Preview
                   </p>
 
                   <div className="border rounded-2xl overflow-hidden bg-gray-50">
+
                     <img
                       src={preview}
                       alt="Payment screenshot preview"
+                      width="800"
+                      height="600"
+                      loading="lazy"
+                      decoding="async"
                       className="w-full max-h-80 object-contain"
                     />
+
                   </div>
+
                 </div>
               )}
+
 
               {/* ERROR */}
 
@@ -387,6 +439,7 @@ export default function Payment() {
                   {error}
                 </div>
               )}
+
 
               {/* SUBMIT */}
 
