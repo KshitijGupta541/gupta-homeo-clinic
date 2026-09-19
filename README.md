@@ -4,7 +4,7 @@ A modern full-stack Clinic Management & Appointment Booking System built for a r
 
 ## 🌐 Live Demo
 
-(https://guptahomeoclinic.netlify.app/)
+(https://guptahomeoclinic.online/)
 
 ## 🚀 Features
 
