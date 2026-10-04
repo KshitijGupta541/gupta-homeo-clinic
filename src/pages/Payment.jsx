@@ -97,7 +97,7 @@ export default function Payment() {
       formData.append("paymentScreenshot", screenshot);
 
       await axios.post(
-        "http://localhost:5000/api/payments/upload",
+        `${import.meta.env.VITE_API_URL}/payments/upload`,
         formData
       );
 
