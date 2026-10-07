@@ -18,7 +18,7 @@ export default function Hero() {
         >
 
           <span className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full text-sm font-semibold">
-            Trusted by 1000+ Happy Patients
+            Trusted by 50,000+ Happy Patients
           </span>
 
           <h1 className="text-6xl font-extrabold leading-tight mt-6 text-gray-900">
