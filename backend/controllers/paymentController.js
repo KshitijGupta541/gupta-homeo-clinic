@@ -1,10 +1,11 @@
+
 import cloudinary from "../config/cloudinary.js";
 import Appointment from "../models/Appointment.js";
 import streamifier from "streamifier";
 
-// Upload image buffer to Cloudinary
-const uploadToCloudinary = (buffer) => {
-  return new Promise((resolve, reject) => {
+// Upload an image buffer to Cloudinary.
+const uploadToCloudinary = (buffer) =>
+  new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: "gupta-homeo-clinic/payments",
@@ -21,12 +22,9 @@ const uploadToCloudinary = (buffer) => {
 
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
-};
 
-// ======================================================
-// UPLOAD PAYMENT PROOF
-// ======================================================
-
+// Patient submits payment proof.
+// Transaction ID is optional, but the screenshot is still required.
 export const uploadPaymentProof = async (req, res) => {
   try {
     const { appointmentId, transactionId } = req.body;
@@ -34,14 +32,14 @@ export const uploadPaymentProof = async (req, res) => {
     if (!appointmentId) {
       return res.status(400).json({
         success: false,
-        message: "Appointment ID is required",
+        message: "Appointment ID is required.",
       });
     }
 
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: "Payment screenshot is required",
+        message: "Please upload a payment screenshot.",
       });
     }
 
@@ -50,17 +48,15 @@ export const uploadPaymentProof = async (req, res) => {
     if (!appointment) {
       return res.status(404).json({
         success: false,
-        message: "Appointment not found",
+        message: "Appointment not found.",
       });
     }
 
-    // Upload screenshot to Cloudinary
     const uploadResult = await uploadToCloudinary(req.file.buffer);
 
-    // Update appointment
     appointment.paymentStatus = "Pending Verification";
-    appointment.paymentAmount = 300;
-    appointment.paymentMethod = "UPI";
+    appointment.paymentAmount = appointment.paymentAmount || 300;
+    appointment.paymentMethod = appointment.paymentMethod || "UPI";
     appointment.paymentScreenshot = uploadResult.secure_url;
     appointment.transactionId = transactionId?.trim() || "";
 
@@ -68,7 +64,7 @@ export const uploadPaymentProof = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Payment proof submitted successfully",
+      message: "Payment proof submitted successfully.",
       data: {
         appointmentId: appointment._id,
         paymentStatus: appointment.paymentStatus,
@@ -79,20 +75,17 @@ export const uploadPaymentProof = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Payment upload error:", error);
+    console.error("Payment upload error:", error.message);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to upload payment proof",
-      error: error.message,
+      message: "Failed to upload payment proof.",
     });
   }
 };
 
-// ======================================================
-// APPROVE PAYMENT
-// ======================================================
-
+// Admin manually verifies that payment was received.
+// A transaction ID or screenshot is not required for manual verification.
 export const approvePayment = async (req, res) => {
   try {
     const appointment = await Appointment.findById(
@@ -102,37 +95,36 @@ export const approvePayment = async (req, res) => {
     if (!appointment) {
       return res.status(404).json({
         success: false,
-        message: "Appointment not found",
+        message: "Appointment not found.",
       });
     }
 
     appointment.paymentStatus = "Paid";
     appointment.paymentVerifiedAt = new Date();
-    appointment.paymentRemarks = "Payment verified by admin";
-    appointment.status = "Confirmed";
+    appointment.paymentRemarks =
+      "Payment manually verified by admin.";
+
+    // Do not automatically confirm the appointment here.
+    // The admin can confirm it separately in Appointment Management.
 
     await appointment.save();
 
     return res.status(200).json({
       success: true,
-      message: "Payment approved and appointment confirmed",
+      message: "Payment marked as received.",
       data: appointment,
     });
   } catch (error) {
-    console.error("Approve payment error:", error);
+    console.error("Approve payment error:", error.message);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to approve payment",
-      error: error.message,
+      message: "Failed to approve payment.",
     });
   }
 };
 
-// ======================================================
-// REJECT PAYMENT
-// ======================================================
-
+// Admin rejects a payment submission.
 export const rejectPayment = async (req, res) => {
   try {
     const appointment = await Appointment.findById(
@@ -142,28 +134,28 @@ export const rejectPayment = async (req, res) => {
     if (!appointment) {
       return res.status(404).json({
         success: false,
-        message: "Appointment not found",
+        message: "Appointment not found.",
       });
     }
 
     appointment.paymentStatus = "Rejected";
     appointment.paymentVerifiedAt = null;
-    appointment.paymentRemarks = "Payment proof rejected by admin";
+    appointment.paymentRemarks =
+      "Payment submission rejected by admin.";
 
     await appointment.save();
 
     return res.status(200).json({
       success: true,
-      message: "Payment rejected",
+      message: "Payment rejected.",
       data: appointment,
     });
   } catch (error) {
-    console.error("Reject payment error:", error);
+    console.error("Reject payment error:", error.message);
 
     return res.status(500).json({
       success: false,
-      message: "Failed to reject payment",
-      error: error.message,
+      message: "Failed to reject payment.",
     });
   }
 };

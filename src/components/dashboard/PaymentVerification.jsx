@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import {
   CheckCircle,
@@ -9,172 +10,169 @@ import {
   User,
   Calendar,
   Clock,
+  AlertCircle,
+  CreditCard,
 } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  "https://gupta-homeo-clinic.onrender.com/api"
+).replace(/\/+$/, "");
+
+function formatDate(date) {
+  if (!date) return "Not specified";
+
+  const parsed = new Date(date);
+
+  return Number.isNaN(parsed.getTime())
+    ? String(date)
+    : parsed.toLocaleDateString("en-IN");
+}
 
 export default function PaymentVerification() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(null);
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const getAuthConfig = () => {
+  const getAuthConfig = useCallback(() => {
     const token = localStorage.getItem("token");
 
     return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: token
+        ? { Authorization: `Bearer ${token}` }
+        : {},
     };
-  };
+  }, []);
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
     try {
-      setLoading(true);
-
       const response = await axios.get(
-        `${API_URL}/appointments`
+        `${API_URL}/appointments`,
+        getAuthConfig()
       );
 
-      const data = response.data?.data || [];
+      const body = response.data;
 
-      const pendingPayments = data.filter(
-        (appointment) =>
-          appointment.paymentStatus === "Pending Verification"
-      );
+      const allAppointments = Array.isArray(body)
+        ? body
+        : Array.isArray(body?.data)
+          ? body.data
+          : Array.isArray(body?.appointments)
+            ? body.appointments
+            : [];
+
+      // Include requests with or without transaction details.
+      // Also include manually unpaid appointments for admin review.
+      const pendingPayments = allAppointments.filter((appointment) => {
+        const paymentStatus = String(
+          appointment.paymentStatus || "Pending"
+        ).toLowerCase();
+
+        return [
+          "pending",
+          "pending verification",
+          "unpaid",
+          "rejected",
+        ].includes(paymentStatus);
+      });
 
       setAppointments(pendingPayments);
-    } catch (error) {
-      console.error("Failed to fetch payments:", error);
+
+      setSelectedPayment((current) => {
+        if (!current) return null;
+
+        return (
+          pendingPayments.find((item) => item._id === current._id) || null
+        );
+      });
+    } catch (err) {
+      console.error(
+        "Failed to load payment requests:",
+        err.response?.data || err.message
+      );
+
+      setError(
+        err.response?.status === 401
+          ? "Your admin session may have expired. Please log in again."
+          : err.response?.data?.message ||
+              "Unable to load payment requests."
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthConfig]);
 
   useEffect(() => {
     fetchPayments();
-  }, []);
+  }, [fetchPayments]);
 
-  // ======================================================
-  // APPROVE PAYMENT
-  // ======================================================
+  const verifyPayment = async (appointment, action) => {
+    const isApproval = action === "approve";
 
-  const approvePayment = async (appointmentId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to approve this payment?"
-    );
+    const message = isApproval
+      ? `Confirm that ₹${appointment.paymentAmount ?? 300} was actually received for ${appointment.fullName || "this patient"}? Only approve after checking your bank or UPI account. A transaction ID is not required for manual verification.`
+      : `Reject the payment for ${appointment.fullName || "this patient"}?`;
 
-    if (!confirmed) return;
+    if (!window.confirm(message)) return;
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setError("Your admin session has expired. Please log in again.");
+      return;
+    }
+
+    setProcessing(appointment._id);
+    setError("");
+    setSuccess("");
 
     try {
-      setProcessing(appointmentId);
-
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("Admin session expired. Please login again.");
-        return;
-      }
+      const endpoint = isApproval ? "approve" : "reject";
 
       await axios.put(
-        `${API_URL}/payments/${appointmentId}/approve`,
+        `${API_URL}/payments/${appointment._id}/${endpoint}`,
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      alert(
-        "Payment approved successfully. Appointment confirmed."
+        getAuthConfig()
       );
 
       setSelectedPayment(null);
 
-      await fetchPayments();
-    } catch (error) {
-      console.error("Approve payment error:", error);
-
-      if (error.response?.status === 401) {
-        alert("Your admin session has expired. Please login again.");
-      } else {
-        alert(
-          error.response?.data?.message ||
-            "Failed to approve payment."
-        );
-      }
-    } finally {
-      setProcessing(null);
-    }
-  };
-
-  // ======================================================
-  // REJECT PAYMENT
-  // ======================================================
-
-  const rejectPayment = async (appointmentId) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to reject this payment?"
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setProcessing(appointmentId);
-
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("Admin session expired. Please login again.");
-        return;
-      }
-
-      await axios.put(
-        `${API_URL}/payments/${appointmentId}/reject`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      setSuccess(
+        isApproval
+          ? "Payment verification submitted successfully."
+          : "Payment rejection submitted successfully."
       );
 
-      alert("Payment rejected.");
-
-      setSelectedPayment(null);
-
       await fetchPayments();
-    } catch (error) {
-      console.error("Reject payment error:", error);
+    } catch (err) {
+      console.error(
+        "Payment verification failed:",
+        err.response?.data || err.message
+      );
 
-      if (error.response?.status === 401) {
-        alert("Your admin session has expired. Please login again.");
-      } else {
-        alert(
-          error.response?.data?.message ||
-            "Failed to reject payment."
-        );
-      }
+      setError(
+        err.response?.data?.message ||
+          `Unable to ${isApproval ? "approve" : "reject"} this payment.`
+      );
     } finally {
       setProcessing(null);
     }
   };
-
-  // ======================================================
-  // LOADING
-  // ======================================================
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
+      <div className="rounded-2xl bg-white p-10 text-center shadow">
         <RefreshCw
-          className="animate-spin mx-auto text-emerald-600"
           size={30}
+          className="mx-auto animate-spin text-emerald-600"
         />
-
-        <p className="text-gray-500 mt-3">
+        <p className="mt-3 text-gray-500">
           Loading payment requests...
         </p>
       </div>
@@ -182,399 +180,271 @@ export default function PaymentVerification() {
   }
 
   return (
-    <>
-      {/* ==================================================
-          PAYMENT TABLE
-      ================================================== */}
+    <section className="space-y-5">
+      {error && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
+          <AlertCircle size={18} className="mt-0.5 shrink-0" />
+          {error}
+        </div>
+      )}
 
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      {success && (
+        <div
+          role="status"
+          className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800"
+        >
+          {success}
+        </div>
+      )}
 
-        {/* Header */}
-
-        <div className="p-6 border-b flex justify-between items-center">
-
+      <div className="overflow-hidden rounded-2xl bg-white shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b p-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">
+            <h2 className="text-2xl font-bold text-gray-900">
               Payment Verification
             </h2>
-
-            <p className="text-gray-500 mt-1">
-              Review and verify patient consultation payments.
+            <p className="mt-1 text-sm text-gray-500">
+              Verify payments manually, including payments without transaction IDs.
             </p>
           </div>
 
           <button
+            type="button"
             onClick={fetchPayments}
-            className="p-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition"
-            title="Refresh"
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
           >
-            <RefreshCw size={19} />
+            <RefreshCw size={17} />
+            Refresh
           </button>
-
         </div>
-
-        {/* Empty State */}
 
         {appointments.length === 0 ? (
           <div className="p-12 text-center">
-
-            <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center">
-              <CheckCircle
-                size={32}
-                className="text-emerald-600"
-              />
-            </div>
-
-            <h3 className="text-xl font-semibold text-gray-800 mt-5">
-              No Pending Payments
+            <CheckCircle
+              size={36}
+              className="mx-auto text-emerald-600"
+            />
+            <h3 className="mt-4 text-lg font-semibold text-gray-900">
+              No pending payments
             </h3>
-
-            <p className="text-gray-500 mt-2">
-              All payment requests have been processed.
+            <p className="mt-2 text-sm text-gray-500">
+              No payments currently require verification.
             </p>
-
           </div>
         ) : (
-
           <div className="overflow-x-auto">
-
-            <table className="min-w-full">
-
-              <thead className="bg-emerald-600 text-white">
-
+            <table className="min-w-[850px] w-full text-left">
+              <thead className="bg-emerald-700 text-sm text-white">
                 <tr>
-
-                  <th className="px-6 py-4 text-left">
-                    Patient
-                  </th>
-
-                  <th className="px-6 py-4 text-left">
-                    Appointment
-                  </th>
-
-                  <th className="px-6 py-4 text-left">
-                    Amount
-                  </th>
-
-                  <th className="px-6 py-4 text-left">
-                    Transaction ID
-                  </th>
-
-                  <th className="px-6 py-4 text-center">
-                    Payment
-                  </th>
-
-                  <th className="px-6 py-4 text-center">
-                    Actions
-                  </th>
-
+                  <th className="p-4">Patient</th>
+                  <th className="p-4">Appointment</th>
+                  <th className="p-4">Amount</th>
+                  <th className="p-4">Transaction ID</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4 text-center">Actions</th>
                 </tr>
-
               </thead>
 
-              <tbody>
-
+              <tbody className="divide-y divide-gray-100">
                 {appointments.map((appointment) => (
-
-                  <tr
-                    key={appointment._id}
-                    className="border-b hover:bg-gray-50"
-                  >
-
-                    <td className="px-6 py-5">
-
-                      <p className="font-semibold text-gray-800">
-                        {appointment.fullName}
+                  <tr key={appointment._id} className="hover:bg-gray-50">
+                    <td className="p-4">
+                      <p className="font-semibold text-gray-900">
+                        {appointment.fullName || "Unnamed patient"}
                       </p>
-
-                      <p className="text-sm text-gray-500">
-                        {appointment.phone}
+                      <p className="mt-1 text-sm text-gray-500">
+                        {appointment.phone || "No phone provided"}
                       </p>
-
                     </td>
 
-                    <td className="px-6 py-5">
-
-                      <p className="text-sm">
-                        {new Date(
-                          appointment.date
-                        ).toLocaleDateString("en-IN")}
+                    <td className="p-4">
+                      <p className="flex items-center gap-2 text-sm">
+                        <Calendar size={15} />
+                        {formatDate(appointment.date)}
                       </p>
-
-                      <p className="text-sm text-gray-500">
-                        {appointment.time}
+                      <p className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+                        <Clock size={15} />
+                        {appointment.time || "Not specified"}
                       </p>
-
                     </td>
 
-                    <td className="px-6 py-5">
-
-                      <span className="font-bold text-emerald-700 flex items-center gap-1">
+                    <td className="p-4">
+                      <span className="inline-flex items-center font-bold text-emerald-700">
                         <IndianRupee size={16} />
-                        {appointment.paymentAmount || 300}
+                        {appointment.paymentAmount ?? 300}
                       </span>
-
                     </td>
 
-                    <td className="px-6 py-5">
+                    <td className="max-w-40 break-all p-4 font-mono text-sm">
+                      {appointment.transactionId || "Not provided"}
+                    </td>
 
-                      <span className="font-mono text-sm">
-                        {appointment.transactionId ||
-                          "Not provided"}
+                    <td className="p-4">
+                      <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-medium text-orange-800">
+                        {appointment.paymentStatus || "Pending"}
                       </span>
-
                     </td>
 
-                    <td className="px-6 py-5 text-center">
-
-                      <button
-                        onClick={() =>
-                          setSelectedPayment(appointment)
-                        }
-                        className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200"
-                      >
-                        <Eye size={17} />
-                        View
-                      </button>
-
-                    </td>
-
-                    <td className="px-6 py-5">
-
-                      <div className="flex justify-center gap-2">
-
+                    <td className="p-4">
+                      <div className="flex flex-wrap justify-center gap-2">
                         <button
-                          disabled={
-                            processing === appointment._id
-                          }
-                          onClick={() =>
-                            approvePayment(
-                              appointment._id
-                            )
-                          }
-                          className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                          type="button"
+                          onClick={() => setSelectedPayment(appointment)}
+                          title="View payment details"
+                          className="rounded-lg bg-blue-50 p-2 text-blue-700 hover:bg-blue-100"
                         >
-                          <CheckCircle size={17} />
-                          Approve
+                          <Eye size={17} />
                         </button>
 
                         <button
-                          disabled={
-                            processing === appointment._id
-                          }
-                          onClick={() =>
-                            rejectPayment(
-                              appointment._id
-                            )
-                          }
-                          className="bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                          type="button"
+                          disabled={processing === appointment._id}
+                          onClick={() => verifyPayment(appointment, "approve")}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                         >
-                          <XCircle size={17} />
+                          <CheckCircle size={16} />
+                          {processing === appointment._id
+                            ? "Saving..."
+                            : "Mark as Paid"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={processing === appointment._id}
+                          onClick={() => verifyPayment(appointment, "reject")}
+                          className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                        >
+                          <XCircle size={16} />
                           Reject
                         </button>
-
                       </div>
-
                     </td>
-
                   </tr>
-
                 ))}
-
               </tbody>
-
             </table>
-
           </div>
         )}
-
       </div>
 
-      {/* ==================================================
-          PAYMENT DETAILS MODAL
-      ================================================== */}
-
       {selectedPayment && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6">
-
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-
-            <div className="p-6 border-b flex justify-between items-center">
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b p-5">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800">
-                  Payment Details
-                </h2>
-
-                <p className="text-gray-500 text-sm mt-1">
-                  Verify payment before approving.
+                <h3 className="text-xl font-bold text-gray-900">
+                  Payment details
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Check the payment before approving it.
                 </p>
               </div>
 
               <button
+                type="button"
                 onClick={() => setSelectedPayment(null)}
-                className="text-gray-500 hover:text-red-600 text-2xl"
+                aria-label="Close payment details"
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
               >
-                ×
+                <XCircle size={22} />
               </button>
-
             </div>
 
-            <div className="p-6">
+            <div className="space-y-5 p-5">
+              <Info
+                icon={<User size={16} />}
+                label="Patient"
+                value={selectedPayment.fullName}
+              />
+              <Info
+                label="Phone"
+                value={selectedPayment.phone}
+              />
+              <Info
+                icon={<Calendar size={16} />}
+                label="Appointment date"
+                value={formatDate(selectedPayment.date)}
+              />
+              <Info
+                icon={<Clock size={16} />}
+                label="Appointment time"
+                value={selectedPayment.time}
+              />
 
-              <div className="grid sm:grid-cols-2 gap-4">
-
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="flex items-center gap-2 text-gray-500 text-sm">
-                    <User size={16} />
-                    Patient
-                  </div>
-
-                  <p className="font-semibold mt-1">
-                    {selectedPayment.fullName}
-                  </p>
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-4">
-
-                  <div className="text-gray-500 text-sm">
-                    Phone
-                  </div>
-
-                  <p className="font-semibold mt-1">
-                    {selectedPayment.phone}
-                  </p>
-
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-4">
-
-                  <div className="flex items-center gap-2 text-gray-500 text-sm">
-                    <Calendar size={16} />
-                    Date
-                  </div>
-
-                  <p className="font-semibold mt-1">
-                    {new Date(
-                      selectedPayment.date
-                    ).toLocaleDateString("en-IN")}
-                  </p>
-
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-4">
-
-                  <div className="flex items-center gap-2 text-gray-500 text-sm">
-                    <Clock size={16} />
-                    Time
-                  </div>
-
-                  <p className="font-semibold mt-1">
-                    {selectedPayment.time}
-                  </p>
-
-                </div>
-
+              <div className="rounded-xl bg-emerald-50 p-4">
+                <p className="flex items-center gap-2 text-sm text-gray-600">
+                  <CreditCard size={16} />
+                  Payment amount
+                </p>
+                <p className="mt-1 text-3xl font-bold text-emerald-700">
+                  ₹{selectedPayment.paymentAmount ?? 300}
+                </p>
               </div>
 
-              {/* Amount */}
-
-              <div className="bg-emerald-50 rounded-2xl p-5 mt-6">
-
-                <p className="text-gray-600 text-sm">
-                  Consultation Fee
-                </p>
-
-                <p className="text-3xl font-bold text-emerald-700">
-                  ₹{selectedPayment.paymentAmount || 300}
-                </p>
-
-              </div>
-
-              {/* Transaction ID */}
-
-              <div className="mt-6">
-
-                <p className="font-semibold text-gray-700">
-                  Transaction ID
-                </p>
-
-                <div className="bg-gray-100 rounded-xl p-4 mt-2 font-mono break-all">
-                  {selectedPayment.transactionId ||
-                    "Not provided"}
-                </div>
-
-              </div>
-
-              {/* Screenshot */}
+              <Info
+                label="Transaction ID"
+                value={selectedPayment.transactionId || "Not provided"}
+              />
 
               {selectedPayment.paymentScreenshot ? (
-                <div className="mt-6">
-
-                  <p className="font-semibold text-gray-700 mb-3">
-                    Payment Screenshot
-                  </p>
-
-                  <div className="border rounded-2xl overflow-hidden bg-gray-50">
-                    <img
-                      src={
-                        selectedPayment.paymentScreenshot
-                      }
-                      alt="Payment proof"
-                      className="w-full max-h-[500px] object-contain"
-                    />
-                  </div>
-
+                <div>
+                  <p className="mb-2 font-semibold">Payment screenshot</p>
+                  <img
+                    src={selectedPayment.paymentScreenshot}
+                    alt="Customer payment proof"
+                    className="max-h-[400px] w-full rounded-xl border object-contain"
+                  />
                 </div>
               ) : (
-                <div className="mt-6 bg-yellow-50 text-yellow-700 rounded-xl p-4">
-                  Payment screenshot has not been uploaded.
-                </div>
+                <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
+                  No payment screenshot was uploaded. Check your bank or UPI
+                  account before manually marking this payment as received.
+                </p>
               )}
 
-              {/* Actions */}
-
-              <div className="flex gap-3 mt-8">
-
+              <div className="flex flex-wrap gap-3">
                 <button
-                  disabled={
-                    processing === selectedPayment._id
-                  }
-                  onClick={() =>
-                    approvePayment(
-                      selectedPayment._id
-                    )
-                  }
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-400 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2"
+                  type="button"
+                  disabled={processing === selectedPayment._id}
+                  onClick={() => verifyPayment(selectedPayment, "approve")}
+                  className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                 >
-                  <CheckCircle size={18} />
-                  Approve Payment
+                  Mark as Paid
                 </button>
 
                 <button
-                  disabled={
-                    processing === selectedPayment._id
-                  }
-                  onClick={() =>
-                    rejectPayment(
-                      selectedPayment._id
-                    )
-                  }
-                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2"
+                  type="button"
+                  disabled={processing === selectedPayment._id}
+                  onClick={() => verifyPayment(selectedPayment, "reject")}
+                  className="flex-1 rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                 >
-                  <XCircle size={18} />
                   Reject Payment
                 </button>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
       )}
+    </section>
+  );
+}
 
-    </>
+function Info({ label, value, icon }) {
+  return (
+    <div className="rounded-xl bg-gray-50 p-4">
+      <p className="flex items-center gap-2 text-sm text-gray-500">
+        {icon}
+        {label}
+      </p>
+      <p className="mt-1 break-words font-medium text-gray-900">
+        {value === null || value === undefined || value === ""
+          ? "Not provided"
+          : value}
+      </p>
+    </div>
   );
 }
