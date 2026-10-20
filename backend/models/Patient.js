@@ -79,13 +79,11 @@ const patientSchema = new mongoose.Schema(
   }
 );
 
-patientSchema.pre("save", async function (next) {
+patientSchema.pre("save", async function () {
   if (!this.patientId) {
     const count = await mongoose.models.Patient.countDocuments();
     this.patientId = `PAT${String(count + 1).padStart(5, "0")}`;
   }
-
-  next();
 });
 
 export default mongoose.model("Patient", patientSchema);

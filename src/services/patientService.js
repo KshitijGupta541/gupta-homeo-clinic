@@ -1,6 +1,11 @@
 import axios from "axios";
 
-const API = `${import.meta.env.VITE_API_URL}/patients`;
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  "https://gupta-homeo-clinic.onrender.com/api"
+).replace(/\/+$/, "");
+
+const API = `${API_BASE_URL}/patients`;
 
 // ======================================================
 // AUTH CONFIG
