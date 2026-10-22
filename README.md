@@ -2,7 +2,7 @@
 
 A modern full-stack Clinic Management & Appointment Booking System built for a real homeopathy clinic.
 
-## 🌐 Live Demo
+## 🌐 Live Link
 
 (https://guptahomeoclinic.online/)
 
