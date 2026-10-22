@@ -77,11 +77,6 @@ export default function Payment() {
       return;
     }
 
-    if (!transactionId.trim()) {
-      setError("Please enter your UPI transaction ID.");
-      return;
-    }
-
     if (!screenshot) {
       setError("Please upload your payment screenshot.");
       return;
@@ -348,7 +343,7 @@ export default function Payment() {
               <div>
 
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  UPI Transaction ID
+                  UPI Transaction ID <span className="font-normal text-gray-500">(optional)</span>
                 </label>
 
                 <input
@@ -357,12 +352,12 @@ export default function Payment() {
                   onChange={(e) =>
                     setTransactionId(e.target.value)
                   }
-                  placeholder="Enter your transaction ID"
+                  placeholder="Enter your transaction ID if available"
                   className="w-full border border-gray-300 rounded-xl px-4 py-3.5 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
                 />
 
                 <p className="text-xs text-gray-500 mt-2">
-                  You can find this in your UPI payment receipt.
+                  You can find this in your UPI payment receipt. If you don't have it, you can leave this blank.
                 </p>
 
               </div>
